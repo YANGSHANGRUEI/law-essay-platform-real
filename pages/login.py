@@ -9,12 +9,10 @@ import hashlib
 import streamlit as st
 
 from utils.session import restore_login, save_login, clear_login
-from utils.sheets_client import show_storage_status
 from utils.users_store import load_users, save_users
 
 
 st.title("登入／註冊")
-show_storage_status("login")
 
 restore_login(st)
 

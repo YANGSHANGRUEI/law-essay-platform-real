@@ -29,7 +29,6 @@ from utils.taxonomy import (
     list_teachers,
     load_taxonomy,
 )
-from utils.sheets_client import show_storage_status
 from utils.user_store import add_tokens
 
 st.title("上傳作答")
@@ -39,8 +38,6 @@ restore_login(st)
 if not st.session_state.get("logged_in"):
     st.warning("請先登入才能上傳")
     st.stop()
-
-show_storage_status("upload")
 
 taxonomy = load_taxonomy()
 fields = list_fields(taxonomy)

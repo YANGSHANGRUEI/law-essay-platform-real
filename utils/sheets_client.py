@@ -31,45 +31,6 @@ def _creds_info_from_secrets() -> dict:
     return dict(raw)
 
 
-def sheets_storage_label() -> str:
-    return "Google 試算表" if use_sheets() else "本機檔案"
-
-
-def test_sheets_connection() -> tuple[bool, str]:
-    if not use_sheets():
-        return False, "Secrets 裡找不到 gcp_service_account（區塊名稱必須完全一致）"
-    try:
-        ws = get_worksheet("answers")
-        return True, f"連線成功，作答分頁：{ws.title}"
-    except Exception as e:
-        return False, f"{type(e).__name__}: {e}"
-
-
-DEPLOY_TAG = "sheets-v1"
-
-
-def show_storage_status(widget_key: str = "default") -> None:
-    """在頁面主區塊顯示儲存模式（st.navigation 會蓋掉 app.py 側欄自訂內容）。"""
-    import streamlit as st
-
-    st.caption(f"程式版本：{DEPLOY_TAG}")
-
-    if use_sheets():
-        st.info(f"資料儲存：{sheets_storage_label()}")
-    else:
-        st.warning(
-            "資料儲存：本機檔案（試算表不會更新）。"
-            "請在 Streamlit Cloud Secrets 設定 [gcp_service_account]，並 Reboot app。"
-        )
-    with st.expander("試算表連線測試"):
-        if st.button("測試連線", key=f"test_sheets_{widget_key}"):
-            ok, msg = test_sheets_connection()
-            if ok:
-                st.success(msg)
-            else:
-                st.error(msg)
-
-
 def get_streamlit_session_id() -> str:
     try:
         from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -82,16 +43,45 @@ def get_streamlit_session_id() -> str:
     return ""
 
 
+def _normalize_private_key(key: str) -> str:
+    """修正 Secrets 貼上時 private_key 換行跑掉的常見情況。"""
+    key = (key or "").strip()
+    if not key:
+        return key
+    if "\\n" in key:
+        key = key.replace("\\n", "\n")
+    if "BEGIN PRIVATE KEY" not in key:
+        return key
+    # 三引號貼上但只剩一行
+    if key.count("\n") < 2:
+        body = key
+        body = body.replace("-----BEGIN PRIVATE KEY-----", "")
+        body = body.replace("-----END PRIVATE KEY-----", "")
+        body = "".join(body.split())
+        chunks = [body[i : i + 64] for i in range(0, len(body), 64)]
+        key = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(chunks) + "\n-----END PRIVATE KEY-----\n"
+    else:
+        key = key.replace("-----BEGIN PRIVATE KEY-----", "-----BEGIN PRIVATE KEY-----\n")
+        key = key.replace("-----END PRIVATE KEY-----", "\n-----END PRIVATE KEY-----\n")
+        key = "\n".join(line.strip() for line in key.splitlines() if line.strip())
+        if not key.endswith("\n"):
+            key += "\n"
+    return key
+
+
 def _get_client():
     import gspread
-    import streamlit as st
     from google.oauth2.service_account import Credentials
 
     creds_info = _creds_info_from_secrets()
-    private_key = creds_info.get("private_key", "")
-    if isinstance(private_key, str) and "\\n" in private_key:
-        creds_info["private_key"] = private_key.replace("\\n", "\n")
-    creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+    creds_info["private_key"] = _normalize_private_key(creds_info.get("private_key", ""))
+    try:
+        creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+    except ValueError as e:
+        raise ValueError(
+            "gcp_service_account 的 private_key 格式錯誤。"
+            "請在 Streamlit Secrets 用三引號 \"\"\" 多行貼上金鑰（見 secrets.toml.example）。"
+        ) from e
     return gspread.authorize(creds)
 
 
