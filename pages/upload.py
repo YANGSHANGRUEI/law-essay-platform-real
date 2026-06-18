@@ -12,7 +12,7 @@ from utils.answers_store import (
     GRADE_OPTIONS,
     MIN_ANSWER_CHARS,
     MIN_ANSWER_HINT,
-    find_similar_user_upload,
+    find_similar_upload,
     format_label,
     load_answers,
     save_answers,
@@ -106,11 +106,11 @@ if st.button("提交"):
                 f"{score_value}分｜等第{grade}），每組分類限上傳一次"
             )
         else:
-            similar = find_similar_user_upload(user_id, normalized_answer, existing)
+            similar = find_similar_upload(normalized_answer, existing)
             if similar:
                 st.warning(
-                    f"作答與你先前上傳過的內容過於相似（{format_label(similar)}），"
-                    "請勿以微調字句重複提交"
+                    f"作答與平台上既有內容過於相似（{format_label(similar)}），"
+                    "請勿重複提交相同或微調字句的作答"
                 )
             else:
                 existing.append(

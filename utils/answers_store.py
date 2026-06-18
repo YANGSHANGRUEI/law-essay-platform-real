@@ -184,8 +184,7 @@ def answer_similarity(text_a: str, text_b: str) -> float:
     return difflib.SequenceMatcher(None, text_a, text_b).ratio()
 
 
-def find_similar_user_upload(
-    user_id: str,
+def find_similar_upload(
     answer_text: str,
     answers: list[dict],
     threshold: float = SIMILAR_ANSWER_RATIO,
@@ -194,8 +193,6 @@ def find_similar_user_upload(
     if not normalized:
         return None
     for ans in answers:
-        if ans.get("uploader_id") != user_id:
-            continue
         existing = ans.get("answer_text", "").strip()
         if not existing:
             continue
