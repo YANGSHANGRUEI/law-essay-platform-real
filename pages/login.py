@@ -21,7 +21,7 @@ users = load_users()
 if st.session_state.get("logged_in") and st.session_state.get("username"):
     username_logged = st.session_state["username"]
     balance = users[username_logged]["tokens"]
-    st.info(f"你已登入，代號：{st.session_state['user_id']}")
+    st.info("你已登入")
     st.metric("我的代幣", balance)
     if st.button("登出"):
         clear_login(st)
