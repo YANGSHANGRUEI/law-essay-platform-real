@@ -2,7 +2,7 @@ import csv
 import difflib
 import os
 
-from utils.sheets_client import get_worksheet, use_sheets
+from utils.sheets_client import get_worksheet, use_sheets, _sheet_api_retry
 from utils.taxonomy import parse_year_parts
 
 ANSWERS_FILE = "data/answers.csv"
@@ -21,6 +21,9 @@ MIN_ANSWER_CHARS = 300
 MIN_ANSWER_HINT = "依誠信原則合理的字數"
 SIMILAR_ANSWER_RATIO = 0.85
 GRADE_OPTIONS = ["A", "B", "C", "F", "N/A"]
+_ANSWERS_CACHE_KEY = "_answers_sheet_cache"
+_ANSWERS_CACHE_TS_KEY = "_answers_sheet_cache_ts"
+_ANSWERS_CACHE_TTL_SEC = 120
 
 
 def normalize_meta(ans: dict) -> tuple[str, str, str, str]:
@@ -59,7 +62,20 @@ def to_new_row(ans: dict) -> dict:
 
 def load_answers() -> list[dict]:
     if use_sheets():
-        return _load_answers_from_sheet()
+        import time
+
+        import streamlit as st
+
+        cached = st.session_state.get(_ANSWERS_CACHE_KEY)
+        cached_at = st.session_state.get(_ANSWERS_CACHE_TS_KEY, 0)
+        if cached is not None and time.time() - cached_at < _ANSWERS_CACHE_TTL_SEC:
+            return cached
+        rows = _sheet_api_retry(_load_answers_from_sheet, stale_fallback=cached)
+        if rows is None:
+            rows = []
+        st.session_state[_ANSWERS_CACHE_KEY] = rows
+        st.session_state[_ANSWERS_CACHE_TS_KEY] = time.time()
+        return rows
     return _load_answers_from_file()
 
 
@@ -90,7 +106,14 @@ def _load_answers_from_sheet() -> list[dict]:
 
 def save_answers(rows: list[dict]) -> None:
     if use_sheets():
-        _save_answers_to_sheet(rows)
+        normalized = [to_new_row(row) for row in rows]
+        _save_answers_to_sheet(normalized)
+        import time
+
+        import streamlit as st
+
+        st.session_state[_ANSWERS_CACHE_KEY] = normalized
+        st.session_state[_ANSWERS_CACHE_TS_KEY] = time.time()
     else:
         _save_answers_to_file(rows)
 

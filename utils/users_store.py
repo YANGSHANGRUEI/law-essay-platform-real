@@ -1,23 +1,33 @@
 import json
 import os
 
-from utils.sheets_client import get_worksheet, parse_unlocked, use_sheets
+from utils.sheets_client import get_worksheet, parse_unlocked, use_sheets, _sheet_api_retry
 
 USERS_FILE = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "data", "users.json"
 )
 USERS_COLUMNS = ["username", "password_hash", "tokens", "unlocked"]
+_USERS_CACHE_KEY = "_users_sheet_cache"
 
 
 def load_users() -> dict:
     if use_sheets():
-        return _load_users_from_sheet()
+        import streamlit as st
+
+        if _USERS_CACHE_KEY in st.session_state:
+            return st.session_state[_USERS_CACHE_KEY]
+        users = _sheet_api_retry(_load_users_from_sheet)
+        st.session_state[_USERS_CACHE_KEY] = users
+        return users
     return _load_users_from_file()
 
 
 def save_users(users: dict) -> None:
     if use_sheets():
         _save_users_to_sheet(users)
+        import streamlit as st
+
+        st.session_state[_USERS_CACHE_KEY] = users
     else:
         _save_users_to_file(users)
 

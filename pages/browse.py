@@ -38,7 +38,7 @@ username = st.session_state["username"]
 balance = users[username]["tokens"]
 st.metric("我的代幣", balance)
 
-answers = load_answers()
+taxonomy = load_taxonomy()
 
 
 def matches_filter(
@@ -66,8 +66,6 @@ def matches_filter(
         return False
     return True
 
-
-taxonomy = load_taxonomy()
 
 st.subheader("題庫瀏覽")
 col1, col2, col3 = st.columns(3)
@@ -150,6 +148,8 @@ all_filters_selected = all(value != "全部" for value in filters)
 if not all_filters_selected:
     st.info("請完整選擇法領域、科目、老師、學年、學期、期中/期末後，才會顯示題目與作答")
     st.stop()
+
+answers = load_answers()
 
 year_value = build_year_value(
     academic_year_filter, semester_filter, exam_period_filter

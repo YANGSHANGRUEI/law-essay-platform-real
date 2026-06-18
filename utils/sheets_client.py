@@ -85,6 +85,29 @@ def _get_client():
     return gspread.authorize(creds)
 
 
+def _service_account_email() -> str:
+    try:
+        return str(_creds_info_from_secrets().get("client_email", "")).strip()
+    except Exception:
+        return ""
+
+
+def _open_spreadsheet(client):
+    import gspread
+
+    try:
+        return client.open_by_key(SPREADSHEET_ID)
+    except gspread.exceptions.APIError as e:
+        status = getattr(e.response, "status_code", None)
+        email = _service_account_email()
+        if status in (403, 404):
+            raise PermissionError(
+                f"無法開啟 Google 試算表（HTTP {status}）。"
+                f"請把試算表共用給 Service Account「{email}」，權限選編輯者。"
+            ) from e
+        raise
+
+
 def get_worksheet(sheet_key: str):
     import gspread
 
@@ -92,7 +115,7 @@ def get_worksheet(sheet_key: str):
         raise ValueError(f"未知的 sheet_key: {sheet_key}")
 
     client = _get_client()
-    spreadsheet = client.open_by_key(SPREADSHEET_ID)
+    spreadsheet = _open_spreadsheet(client)
     for title in _TAB_ALIASES[sheet_key]:
         try:
             return spreadsheet.worksheet(title)
@@ -101,6 +124,28 @@ def get_worksheet(sheet_key: str):
 
     index = {"answers": 0, "users": 1}[sheet_key]
     return spreadsheet.get_worksheet(index)
+
+
+def _sheet_api_retry(func, *, stale_fallback=None):
+    """429 時短暫重試；仍失敗且有过期快取則用快取。"""
+    import time
+
+    import gspread
+
+    last_error = None
+    for wait_sec in (0, 2, 4):
+        if wait_sec:
+            time.sleep(wait_sec)
+        try:
+            return func()
+        except gspread.exceptions.APIError as e:
+            last_error = e
+            status = getattr(e.response, "status_code", None)
+            if status == 429 and stale_fallback is not None:
+                return stale_fallback
+            if status != 429:
+                raise
+    raise last_error
 
 
 def parse_unlocked(value) -> list:
