@@ -23,4 +23,4 @@ jobs:
             exit 1
           fi
 
-          curl -fsS -L --max-time 30 "$APP_URL" > /dev/null
+          curl -fsS --max-time 30 "$APP_URL" > /dev/null
