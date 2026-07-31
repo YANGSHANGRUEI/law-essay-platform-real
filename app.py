@@ -17,10 +17,15 @@ hide_style = """
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stDeployButton {display:none;}
+    a[data-testid="stDeployButton"] {display:none;}
     [data-testid="stToolbar"] {display:none;}
+    [data-testid="stHeader"] {display:none;}
     [data-testid="stDecoration"] {display:none;}
     [data-testid="stStatusWidget"] {display:none;}
     button[kind="header"] {display:none;}
+    button[kind="headerNoPadding"] {display:none;}
+    button[title="View app menu"] {display:none;}
+    button[aria-label="View app menu"] {display:none;}
     </style>
 """
 st.markdown(hide_style, unsafe_allow_html=True)
