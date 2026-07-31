@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import os
 
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
@@ -30,6 +31,9 @@ from utils.taxonomy import (
     load_taxonomy,
 )
 from utils.user_store import add_tokens
+from utils.openai_client import check_ai_generated
+from utils.openai_client import find_embedding_duplicate
+from utils.openai_client import check_relevance
 
 st.title("上傳作答")
 
@@ -90,28 +94,53 @@ st.caption(f"目前 {char_count} 字（至少 {MIN_ANSWER_HINT}）")
 
 if st.button("提交"):
     normalized_answer = answer_text.strip()
+    base_warning = "您的輸入行為不符合誠信原則，請自重。"
 
     if normalized_answer == "":
         st.warning("請輸入作答")
     elif char_count < MIN_ANSWER_CHARS:
         st.warning(f"作答至少 {MIN_ANSWER_HINT}，目前只有 {char_count} 字")
     else:
+        relevance = check_relevance(normalized_answer, api_key=st.secrets.get("OPENAI_API_KEY"))
+        if "error" in relevance:
+            st.error(f"內容判定失敗：{relevance['error']}")
+            st.stop()
+        if not relevance.get("is_answer"):
+            st.warning(f"{base_warning}（原因：無關內容）")
+            st.stop()
+
+        ai_generated = check_ai_generated(normalized_answer, api_key=st.secrets.get("OPENAI_API_KEY"))
+        if "error" in ai_generated:
+            st.error(f"AI 生成判定失敗：{ai_generated['error']}")
+            st.stop()
+        if ai_generated.get("is_ai_generated"):
+            st.warning(f"{base_warning}（原因：疑似 AI 生成）")
+            st.stop()
+
         existing = load_answers()
+
+        # 使用 embeddings 與現有答案比對，以偵測貼上或幾乎相同的內容
+        emb_dup = find_embedding_duplicate(normalized_answer, existing, api_key=st.secrets.get("OPENAI_API_KEY"), threshold=0.92)
+        if isinstance(emb_dup, dict) and emb_dup.get("error"):
+            # 審查非關鍵錯誤，僅記 log 並繼續
+            st.caption(f"(注意) 嵌入比對失敗：{emb_dup['error']}")
+        elif emb_dup:
+            dup_ans = emb_dup.get("answer")
+            sim = emb_dup.get("score")
+            dup_label = format_label(dup_ans) if isinstance(dup_ans, dict) else "未分類"
+            st.warning(
+                f"作答內容與平台上既有內容高度相似（相似度 {sim:.2f}，{dup_label}），請勿重複提交。"
+            )
+            st.stop()
         user_id = st.session_state["user_id"]
         if user_has_combo_upload(
             user_id, field, subject, teacher, year, score_value, grade, existing
         ):
-            st.warning(
-                f"你已在此分類上傳過作答（{field}｜{subject}｜{teacher}｜{year}｜"
-                f"{score_value}分｜等第{grade}），每組分類限上傳一次"
-            )
+            st.warning(f"{base_warning}（原因：同分類已上傳過作答）")
         else:
             similar = find_similar_upload(normalized_answer, existing)
             if similar:
-                st.warning(
-                    f"作答與平台上既有內容過於相似（{format_label(similar)}），"
-                    "請勿重複提交相同或微調字句的作答"
-                )
+                st.warning(f"{base_warning}（原因：內容與既有作答過於相似）")
             else:
                 existing.append(
                     {

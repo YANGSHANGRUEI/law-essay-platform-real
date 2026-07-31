@@ -11,6 +11,16 @@ from utils.nav_pages import build_pages
 from utils.session import restore_login
 
 st.set_page_config(page_title="法律申論題眾包平台")
+hide_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display:none;}
+    </style>
+"""
+st.markdown(hide_style, unsafe_allow_html=True)
+
 
 restore_login(st)
 

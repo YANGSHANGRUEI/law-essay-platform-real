@@ -79,13 +79,28 @@ SESSION_SECRET = "隨機長字串請自行產生"
 
 5. Deploy
 
+## 使用 GitHub Actions 保持喚醒
+
+如果你的 Streamlit 網站會因閒置而休眠，可以加一個 GitHub Actions 定時 ping 工作流。
+
+1. 在 GitHub repo 的 `Settings` → `Secrets and variables` → `Actions` 新增：
+
+```text
+STREAMLIT_APP_URL = https://你的-app-網址
+```
+
+2. 確保 `.github/workflows/keep-awake.yml` 保持啟用。
+3. 這個 workflow 會每 10 分鐘向你的 Streamlit 網址發送一次請求，降低休眠機率。
+
+注意：這只是維持喚醒的折衷方法，不是官方保證；如果平台政策或資源限制改變，仍可能失效。
+
 ### 雲端部署限制（必讀）
 
-| 項目 | 說明 |
-|------|------|
-| `data/` | 不進 git，部署後為**空資料**；需重新註冊、上傳 |
-| 持久化 | 免費版重啟可能清空 `data/`；正式上線需另規劃儲存 |
-| 題目 | 管理者手動維護 `data/questions.json`（或之後管理者頁） |
+| 項目    | 說明                                                        |
+| ------- | ----------------------------------------------------------- |
+| `data/` | 不進 git，部署後為**空資料**；需重新註冊、上傳              |
+| 持久化  | 免費版重啟可能清空 `data/`；正式上線需另規劃儲存            |
+| 題目    | 管理者手動維護 `data/questions.json`（或之後管理者頁）      |
 | `fcntl` | `user_store.py` 檔案鎖在 Linux 可用；Windows 本機開發需注意 |
 
 ## 代幣規則
