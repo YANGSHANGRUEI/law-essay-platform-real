@@ -3,7 +3,7 @@ name: Keep Streamlit App Awake (Via Empty Commit)
 on:
   schedule:
     # 每 6 小時自動推一次空白 Commit
-    - cron: "*/10 * * * *"
+    - cron: "0 */9 * * *"
   workflow_dispatch: # 允許在 GitHub 網頁上手動點擊測試
 
 jobs:
