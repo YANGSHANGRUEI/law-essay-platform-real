@@ -1,26 +1,27 @@
-name: Keep Streamlit App Awake
+name: Keep Streamlit App Awake (Via Empty Commit)
 
 on:
   schedule:
-    # Every 10 minutes to reduce the chance of Streamlit Cloud sleeping.
+    # 每 6 小時自動推一次空白 Commit
     - cron: "*/10 * * * *"
-  workflow_dispatch:
-
-concurrency:
-  group: keep-awake
-  cancel-in-progress: false
+  workflow_dispatch: # 允許在 GitHub 網頁上手動點擊測試
 
 jobs:
-  ping:
+  keep-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping app URL
-        env:
-          APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
-        run: |
-          if [ -z "$APP_URL" ]; then
-            echo "STREAMLIT_APP_URL secret is not set."
-            exit 1
-          fi
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-          curl -fsS --max-time 30 "$APP_URL" > /dev/null
+      - name: Push empty commit to trigger Streamlit build
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@://github.com"
+          
+          # 建立不影響任何程式碼的空白 Commit
+          git commit --allow-empty -m "Chore: Keep-alive ping to Streamlit Cloud [skip ci]"
+          
+          # 自動推送到目前的分支
+          git push origin HEAD
