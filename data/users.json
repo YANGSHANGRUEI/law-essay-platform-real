@@ -1,0 +1,17 @@
+{
+  "testuser": {
+    "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "tokens": 3,
+    "unlocked": []
+  },
+  "第一個": {
+    "password_hash": "13239a308aeb5cf6393340e165437d85e25c5b4300dfee079a606855843b2834",
+    "tokens": 3,
+    "unlocked": []
+  },
+  "gay": {
+    "password_hash": "586acb3c6bac489308c0938f762da702573a714dfdf3a729dcb40758b4c363ae",
+    "tokens": 3,
+    "unlocked": []
+  }
+}
